@@ -6,10 +6,12 @@ import 'lib/models/ingredient.dart';
 import 'lib/api_client.dart';
 
 void main() async {
-  // Create an API client with mock data since the actual API is not available
+  // Create an API client to use the real Food API
+  // The client will attempt to use the real API first, but will fall back to mock data
+  // if the API is unavailable or returns an error
   final apiClient = FoodApiClient(
-    baseUrl: 'https://foodapi.dzolotov.tech',
-    useMockData: true, // Use mock data instead of making actual API calls
+    baseUrl: 'https://foodapi.dzolotov.pro',
+    useMockData: false, // Try to use the real API first
   );
 
   try {

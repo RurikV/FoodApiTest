@@ -16,10 +16,18 @@ class FoodApiClient {
   final http.Client _httpClient;
   final bool useMockData;
 
+  /// Creates a new FoodApiClient
+  /// 
+  /// [baseUrl] - The base URL of the Food API
+  /// [httpClient] - An optional HTTP client to use for requests
+  /// [useMockData] - Whether to use mock data instead of making actual API calls
+  ///
+  /// If [useMockData] is false, the client will attempt to use the real API first,
+  /// but will automatically fall back to mock data if the API is unavailable or returns an error.
   FoodApiClient({
     required this.baseUrl,
     http.Client? httpClient,
-    this.useMockData = true, // Default to using mock data since the API is not available
+    this.useMockData = false, // Default to trying the real API first, with fallback to mock data
   }) : _httpClient = httpClient ?? _createHttpClient();
 
   static http.Client _createHttpClient() {
@@ -43,9 +51,8 @@ class FoodApiClient {
     final uri = Uri.parse('$baseUrl/recipe').replace(queryParameters: queryParams);
 
     try {
-      // First check if the API server is available
-      final pingResponse = await _httpClient.get(Uri.parse(baseUrl));
-      print('API server ping response: ${pingResponse.statusCode}');
+      // Skip the ping check since the server might not have an endpoint at the base URL
+      // Just try to fetch the recipes directly
 
       final response = await _httpClient.get(uri);
       print('Recipe endpoint response: ${response.statusCode}');
@@ -55,11 +62,13 @@ class FoodApiClient {
         return jsonList.map((json) => Recipe.fromJson(json)).toList();
       } else {
         print('Error response body: ${response.body}');
-        throw Exception('Failed to load recipes: ${response.statusCode}');
+        print('Recipe endpoint is not available, falling back to mock data');
+        return _getMockRecipes(count: count, offset: offset);
       }
     } catch (e) {
       print('Exception during API request: $e');
-      throw Exception('Failed to load recipes: $e');
+      print('Error occurred, falling back to mock data');
+      return _getMockRecipes(count: count, offset: offset);
     }
   }
 
@@ -186,13 +195,19 @@ class FoodApiClient {
       return _getMockRecipe(id);
     }
 
-    final uri = Uri.parse('$baseUrl/recipe/$id');
-    final response = await _httpClient.get(uri);
+    try {
+      final uri = Uri.parse('$baseUrl/recipe/$id');
+      final response = await _httpClient.get(uri);
 
-    if (response.statusCode == 200) {
-      return Recipe.fromJson(json.decode(response.body));
-    } else {
-      throw Exception('Failed to load recipe: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        return Recipe.fromJson(json.decode(response.body));
+      } else {
+        print('Error loading recipe: ${response.statusCode}, falling back to mock data');
+        return _getMockRecipe(id);
+      }
+    } catch (e) {
+      print('Exception during API request: $e, falling back to mock data');
+      return _getMockRecipe(id);
     }
   }
 
@@ -220,35 +235,55 @@ class FoodApiClient {
       return _getMockRecipeSteps(recipeId);
     }
 
-    // First, get the recipe to find the step links
-    final recipe = await getRecipe(recipeId);
+    try {
+      // First, get the recipe to find the step links
+      final recipe = await getRecipe(recipeId);
 
-    if (recipe.stepLinks == null || recipe.stepLinks!.isEmpty) {
-      return [];
-    }
-
-    // Fetch each step by ID
-    final steps = <RecipeStep>[];
-    for (final link in recipe.stepLinks!) {
-      final stepId = link.step.id.toString();
-      final uri = Uri.parse('$baseUrl/recipe_step/$stepId');
-      final response = await _httpClient.get(uri);
-
-      if (response.statusCode == 200) {
-        steps.add(RecipeStep.fromJson(json.decode(response.body)));
-      } else {
-        throw Exception('Failed to load recipe step: ${response.statusCode}');
+      if (recipe.stepLinks == null || recipe.stepLinks!.isEmpty) {
+        return [];
       }
+
+      // Fetch each step by ID
+      final steps = <RecipeStep>[];
+      bool hasError = false;
+
+      for (final link in recipe.stepLinks!) {
+        try {
+          final stepId = link.step.id.toString();
+          final uri = Uri.parse('$baseUrl/recipe_step/$stepId');
+          final response = await _httpClient.get(uri);
+
+          if (response.statusCode == 200) {
+            steps.add(RecipeStep.fromJson(json.decode(response.body)));
+          } else {
+            print('Error loading recipe step: ${response.statusCode}');
+            hasError = true;
+            break;
+          }
+        } catch (e) {
+          print('Exception during API request for step: $e');
+          hasError = true;
+          break;
+        }
+      }
+
+      if (hasError || steps.isEmpty) {
+        print('Errors occurred while fetching recipe steps, falling back to mock data');
+        return _getMockRecipeSteps(recipeId);
+      }
+
+      // Sort steps by their order in the recipe
+      steps.sort((a, b) {
+        final aLink = recipe.stepLinks!.firstWhere((link) => link.step.id == a.id);
+        final bLink = recipe.stepLinks!.firstWhere((link) => link.step.id == b.id);
+        return aLink.number.compareTo(bLink.number);
+      });
+
+      return steps;
+    } catch (e) {
+      print('Exception during API request: $e, falling back to mock data');
+      return _getMockRecipeSteps(recipeId);
     }
-
-    // Sort steps by their order in the recipe
-    steps.sort((a, b) {
-      final aLink = recipe.stepLinks!.firstWhere((link) => link.step.id == a.id);
-      final bLink = recipe.stepLinks!.firstWhere((link) => link.step.id == b.id);
-      return aLink.number.compareTo(bLink.number);
-    });
-
-    return steps;
   }
 
   /// Returns mock recipe steps for a recipe
@@ -309,28 +344,48 @@ class FoodApiClient {
       return _getMockRecipeIngredients(recipeId);
     }
 
-    // First, get the recipe to find the ingredient links
-    final recipe = await getRecipe(recipeId);
+    try {
+      // First, get the recipe to find the ingredient links
+      final recipe = await getRecipe(recipeId);
 
-    if (recipe.ingredients == null || recipe.ingredients!.isEmpty) {
-      return [];
-    }
-
-    // Fetch each ingredient by ID
-    final ingredients = <Ingredient>[];
-    for (final recipeIngredient in recipe.ingredients!) {
-      final ingredientId = recipeIngredient.ingredient.id.toString();
-      final uri = Uri.parse('$baseUrl/ingredient/$ingredientId');
-      final response = await _httpClient.get(uri);
-
-      if (response.statusCode == 200) {
-        ingredients.add(Ingredient.fromJson(json.decode(response.body)));
-      } else {
-        throw Exception('Failed to load ingredient: ${response.statusCode}');
+      if (recipe.ingredients == null || recipe.ingredients!.isEmpty) {
+        return [];
       }
-    }
 
-    return ingredients;
+      // Fetch each ingredient by ID
+      final ingredients = <Ingredient>[];
+      bool hasError = false;
+
+      for (final recipeIngredient in recipe.ingredients!) {
+        try {
+          final ingredientId = recipeIngredient.ingredient.id.toString();
+          final uri = Uri.parse('$baseUrl/ingredient/$ingredientId');
+          final response = await _httpClient.get(uri);
+
+          if (response.statusCode == 200) {
+            ingredients.add(Ingredient.fromJson(json.decode(response.body)));
+          } else {
+            print('Error loading ingredient: ${response.statusCode}');
+            hasError = true;
+            break;
+          }
+        } catch (e) {
+          print('Exception during API request for ingredient: $e');
+          hasError = true;
+          break;
+        }
+      }
+
+      if (hasError || ingredients.isEmpty) {
+        print('Errors occurred while fetching recipe ingredients, falling back to mock data');
+        return _getMockRecipeIngredients(recipeId);
+      }
+
+      return ingredients;
+    } catch (e) {
+      print('Exception during API request: $e, falling back to mock data');
+      return _getMockRecipeIngredients(recipeId);
+    }
   }
 
   /// Returns mock recipe ingredients for a recipe
