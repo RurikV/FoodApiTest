@@ -8,22 +8,26 @@ part of 'recipe_ingredient.dart';
 
 RecipeIngredient _$RecipeIngredientFromJson(Map<String, dynamic> json) =>
     RecipeIngredient(
-      id: (json['id'] as num).toInt(),
+      id: json['id'] == null ? null : (json['id'] as num).toInt(),
       count: (json['count'] as num).toInt(),
       ingredient:
           IngredientRef.fromJson(json['ingredient'] as Map<String, dynamic>),
-      recipe: json['recipe'] == null
-          ? null
-          : RecipeRef.fromJson(json['recipe'] as Map<String, dynamic>),
+      recipe: RecipeRef.fromJson(json['recipe'] as Map<String, dynamic>),
     );
 
-Map<String, dynamic> _$RecipeIngredientToJson(RecipeIngredient instance) =>
-    <String, dynamic>{
-      'id': instance.id,
+Map<String, dynamic> _$RecipeIngredientToJson(RecipeIngredient instance) {
+    final json = <String, dynamic>{
       'count': instance.count,
       'ingredient': instance.ingredient.toJson(),
-      'recipe': instance.recipe?.toJson(),
+      'recipe': instance.recipe.toJson(),
     };
+
+    if (instance.id != null) {
+      json['id'] = instance.id;
+    }
+
+    return json;
+  }
 
 IngredientRef _$IngredientRefFromJson(Map<String, dynamic> json) =>
     IngredientRef(

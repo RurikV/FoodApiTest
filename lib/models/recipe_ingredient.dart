@@ -5,20 +5,20 @@ part 'recipe_ingredient.g.dart';
 
 @JsonSerializable(explicitToJson: true)
 class RecipeIngredient {
-  final int id;
+  final int? id;
   final int count;
-  
+
   @JsonKey(name: 'ingredient')
   final IngredientRef ingredient;
-  
+
   @JsonKey(name: 'recipe')
-  final RecipeRef? recipe;
+  final RecipeRef recipe;
 
   RecipeIngredient({
-    required this.id,
+    this.id,
     required this.count,
     required this.ingredient,
-    this.recipe,
+    required this.recipe,
   });
 
   factory RecipeIngredient.fromJson(Map<String, dynamic> json) => _$RecipeIngredientFromJson(json);

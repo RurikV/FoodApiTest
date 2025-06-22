@@ -92,36 +92,54 @@ class FoodApiClient {
     final ingredient3 = ri.IngredientRef(id: 3);
     final ingredient4 = ri.IngredientRef(id: 4);
     final ingredient5 = ri.IngredientRef(id: 5);
+    final ingredient666 = ri.IngredientRef(id: 666); // Add ingredient with ID 666
+
+    // Create mock recipe references
+    final recipe1Ref = ri.RecipeRef(id: 1);
+    final recipe2Ref = ri.RecipeRef(id: 2);
 
     // Create mock recipe ingredients
     final recipeIngredient1 = ri.RecipeIngredient(
       id: 1,
       count: 200,
       ingredient: ingredient1,
+      recipe: recipe1Ref,
     );
 
     final recipeIngredient2 = ri.RecipeIngredient(
       id: 2,
       count: 3,
       ingredient: ingredient2,
+      recipe: recipe1Ref,
     );
 
     final recipeIngredient3 = ri.RecipeIngredient(
       id: 3,
       count: 1,
       ingredient: ingredient3,
+      recipe: recipe1Ref,
     );
 
     final recipeIngredient4 = ri.RecipeIngredient(
       id: 4,
       count: 100,
       ingredient: ingredient4,
+      recipe: recipe2Ref,
     );
 
     final recipeIngredient5 = ri.RecipeIngredient(
       id: 5,
       count: 2,
       ingredient: ingredient5,
+      recipe: recipe2Ref,
+    );
+
+    // Create recipe ingredient for ingredient 666
+    final recipeIngredient666 = ri.RecipeIngredient(
+      id: 666,
+      count: 1,
+      ingredient: ingredient666,
+      recipe: recipe1Ref,
     );
 
     // Create mock step references
@@ -130,36 +148,36 @@ class FoodApiClient {
     final step3 = rsl.StepRef(id: 3);
     final step4 = rsl.StepRef(id: 4);
 
-    // Create mock recipe references
-    final recipe1Ref = rsl.RecipeRef(id: 1);
-    final recipe2Ref = rsl.RecipeRef(id: 2);
+    // Create mock recipe references for step links
+    final recipe1StepRef = rsl.RecipeRef(id: 1);
+    final recipe2StepRef = rsl.RecipeRef(id: 2);
 
     // Create mock recipe step links
     final recipeStepLink1 = rsl.RecipeStepLink(
       id: 1,
       number: 1,
-      recipe: recipe1Ref,
+      recipe: recipe1StepRef,
       step: step1,
     );
 
     final recipeStepLink2 = rsl.RecipeStepLink(
       id: 2,
       number: 2,
-      recipe: recipe1Ref,
+      recipe: recipe1StepRef,
       step: step2,
     );
 
     final recipeStepLink3 = rsl.RecipeStepLink(
       id: 3,
       number: 1,
-      recipe: recipe2Ref,
+      recipe: recipe2StepRef,
       step: step3,
     );
 
     final recipeStepLink4 = rsl.RecipeStepLink(
       id: 4,
       number: 2,
-      recipe: recipe2Ref,
+      recipe: recipe2StepRef,
       step: step4,
     );
 
@@ -170,7 +188,7 @@ class FoodApiClient {
         name: 'Spaghetti Carbonara',
         duration: 30,
         photo: 'https://example.com/carbonara.jpg',
-        ingredients: [recipeIngredient1, recipeIngredient2, recipeIngredient3],
+        ingredients: [recipeIngredient1, recipeIngredient2, recipeIngredient3, recipeIngredient666], // Added ingredient 666
         stepLinks: [recipeStepLink1, recipeStepLink2],
       ),
       Recipe(
@@ -441,6 +459,13 @@ class FoodApiClient {
         name: 'Parmesan Cheese',
         caloriesForUnit: 110.0,
         measureUnit: mockMeasureUnits[3]!,
+      ),
+      // Add ingredient with ID 666
+      666: Ingredient(
+        id: 666,
+        name: 'Special Ingredient 666',
+        caloriesForUnit: 666.0,
+        measureUnit: mockMeasureUnits[1]!,
       ),
     };
 
