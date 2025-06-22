@@ -12,6 +12,13 @@ import 'models/favorite.dart';
 import 'models/comment.dart';
 
 class FoodApiClient {
+  // API endpoints
+  static const String _recipeEndpoint = '/recipe';
+  static const String _recipeStepEndpoint = '/recipe_step';
+  static const String _recipeStepLinkEndpoint = '/recipe_step_link';
+  static const String _ingredientEndpoint = '/ingredient';
+  static const String _recipeIngredientEndpoint = '/recipe_ingredient';
+  static const String _measureUnitEndpoint = '/measure_unit';
   final String baseUrl;
   final http.Client _httpClient;
   final bool useMockData;
@@ -447,5 +454,217 @@ class FoodApiClient {
     }
 
     return ingredients;
+  }
+
+  /// Creates a new recipe
+  Future<Recipe> createRecipe(Recipe recipe) async {
+    if (useMockData) {
+      print('Using mock data for creating recipe');
+      // In a real implementation, we would add the recipe to our mock data
+      // For now, just return the recipe with a mock ID
+      return Recipe(
+        id: 999, // Mock ID
+        name: recipe.name,
+        duration: recipe.duration,
+        photo: recipe.photo,
+        ingredients: recipe.ingredients,
+        stepLinks: recipe.stepLinks,
+        favorites: recipe.favorites,
+        comments: recipe.comments,
+      );
+    }
+
+    try {
+      final uri = Uri.parse('$baseUrl$_recipeEndpoint');
+      final response = await _httpClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(recipe.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        return Recipe.fromJson(json.decode(response.body));
+      } else {
+        print('Error creating recipe: ${response.statusCode}');
+        print('Error response body: ${response.body}');
+        throw Exception('Failed to create recipe: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Exception during API request: $e');
+      throw Exception('Failed to create recipe: $e');
+    }
+  }
+
+  /// Creates a new recipe step
+  Future<RecipeStep> createRecipeStep(RecipeStep step) async {
+    if (useMockData) {
+      print('Using mock data for creating recipe step');
+      // Return the step with a mock ID
+      return RecipeStep(
+        id: 999, // Mock ID
+        name: step.name,
+        duration: step.duration,
+        stepLinks: step.stepLinks,
+      );
+    }
+
+    try {
+      final uri = Uri.parse('$baseUrl$_recipeStepEndpoint');
+      final response = await _httpClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(step.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        return RecipeStep.fromJson(json.decode(response.body));
+      } else {
+        print('Error creating recipe step: ${response.statusCode}');
+        print('Error response body: ${response.body}');
+        throw Exception('Failed to create recipe step: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Exception during API request: $e');
+      throw Exception('Failed to create recipe step: $e');
+    }
+  }
+
+  /// Creates a new recipe step link
+  Future<rsl.RecipeStepLink> createRecipeStepLink(rsl.RecipeStepLink link) async {
+    if (useMockData) {
+      print('Using mock data for creating recipe step link');
+      // Return the link with a mock ID
+      return rsl.RecipeStepLink(
+        id: 999, // Mock ID
+        number: link.number,
+        recipe: link.recipe,
+        step: link.step,
+      );
+    }
+
+    try {
+      final uri = Uri.parse('$baseUrl$_recipeStepLinkEndpoint');
+      final response = await _httpClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(link.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        return rsl.RecipeStepLink.fromJson(json.decode(response.body));
+      } else {
+        print('Error creating recipe step link: ${response.statusCode}');
+        print('Error response body: ${response.body}');
+        throw Exception('Failed to create recipe step link: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Exception during API request: $e');
+      throw Exception('Failed to create recipe step link: $e');
+    }
+  }
+
+  /// Creates a new ingredient
+  Future<Ingredient> createIngredient(Ingredient ingredient) async {
+    if (useMockData) {
+      print('Using mock data for creating ingredient');
+      // Return the ingredient with a mock ID
+      return Ingredient(
+        id: 999, // Mock ID
+        name: ingredient.name,
+        caloriesForUnit: ingredient.caloriesForUnit,
+        measureUnit: ingredient.measureUnit,
+        recipeIngredients: ingredient.recipeIngredients,
+        freezerItems: ingredient.freezerItems,
+      );
+    }
+
+    try {
+      final uri = Uri.parse('$baseUrl$_ingredientEndpoint');
+      final response = await _httpClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(ingredient.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        return Ingredient.fromJson(json.decode(response.body));
+      } else {
+        print('Error creating ingredient: ${response.statusCode}');
+        print('Error response body: ${response.body}');
+        throw Exception('Failed to create ingredient: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Exception during API request: $e');
+      throw Exception('Failed to create ingredient: $e');
+    }
+  }
+
+  /// Creates a new recipe ingredient
+  Future<ri.RecipeIngredient> createRecipeIngredient(ri.RecipeIngredient recipeIngredient) async {
+    if (useMockData) {
+      print('Using mock data for creating recipe ingredient');
+      // Return the recipe ingredient with a mock ID
+      return ri.RecipeIngredient(
+        id: 999, // Mock ID
+        count: recipeIngredient.count,
+        ingredient: recipeIngredient.ingredient,
+        recipe: recipeIngredient.recipe,
+      );
+    }
+
+    try {
+      final uri = Uri.parse('$baseUrl$_recipeIngredientEndpoint');
+      final response = await _httpClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(recipeIngredient.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        return ri.RecipeIngredient.fromJson(json.decode(response.body));
+      } else {
+        print('Error creating recipe ingredient: ${response.statusCode}');
+        print('Error response body: ${response.body}');
+        throw Exception('Failed to create recipe ingredient: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Exception during API request: $e');
+      throw Exception('Failed to create recipe ingredient: $e');
+    }
+  }
+
+  /// Creates a new measure unit
+  Future<MeasureUnit> createMeasureUnit(MeasureUnit measureUnit) async {
+    if (useMockData) {
+      print('Using mock data for creating measure unit');
+      // Return the measure unit with a mock ID
+      return MeasureUnit(
+        id: 999, // Mock ID
+        one: measureUnit.one,
+        few: measureUnit.few,
+        many: measureUnit.many,
+        ingredients: measureUnit.ingredients,
+      );
+    }
+
+    try {
+      final uri = Uri.parse('$baseUrl$_measureUnitEndpoint');
+      final response = await _httpClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(measureUnit.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        return MeasureUnit.fromJson(json.decode(response.body));
+      } else {
+        print('Error creating measure unit: ${response.statusCode}');
+        print('Error response body: ${response.body}');
+        throw Exception('Failed to create measure unit: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Exception during API request: $e');
+      throw Exception('Failed to create measure unit: $e');
+    }
   }
 }
