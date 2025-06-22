@@ -1,0 +1,34 @@
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+Recipe _$RecipeFromJson(Map<String, dynamic> json) => Recipe(
+      id: (json['id'] as num).toInt(),
+      name: json['name'] as String,
+      duration: (json['duration'] as num).toInt(),
+      photo: json['photo'] as String,
+      ingredients: (json['recipeIngredients'] as List<dynamic>?)
+          ?.map((e) => RecipeIngredient.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      stepLinks: (json['recipeStepLinks'] as List<dynamic>?)
+          ?.map((e) => RecipeStepLink.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      favorites: (json['favoriteRecipes'] as List<dynamic>?)
+          ?.map((e) => Favorite.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      comments: (json['comments'] as List<dynamic>?)
+          ?.map((e) => Comment.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+
+Map<String, dynamic> _$RecipeToJson(Recipe instance) => <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'duration': instance.duration,
+      'photo': instance.photo,
+      'recipeIngredients':
+          instance.ingredients?.map((e) => e.toJson()).toList(),
+      'recipeStepLinks': instance.stepLinks?.map((e) => e.toJson()).toList(),
+      'favoriteRecipes': instance.favorites?.map((e) => e.toJson()).toList(),
+      'comments': instance.comments?.map((e) => e.toJson()).toList(),
+    };
