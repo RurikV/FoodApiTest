@@ -96,6 +96,113 @@ Future<Map<String, dynamic>> getRecipeStepDetailsFromApi(String baseUrl, int ste
   }
 }
 
+// Function to check if an ingredient exists
+Future<bool> checkIngredientExists(String baseUrl, int ingredientId) async {
+  final uri = Uri.parse('$baseUrl/ingredient/$ingredientId');
+  try {
+    final response = await http.get(uri);
+    return response.statusCode == 200;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Function to create an ingredient
+Future<Map<String, dynamic>> createIngredient(String baseUrl, int id, String name, double caloriesForUnit, int measureUnitId) async {
+  final uri = Uri.parse('$baseUrl/ingredient');
+  final body = {
+    'id': id,
+    'name': name,
+    'caloriesForUnit': caloriesForUnit,
+    'measureUnit': {'id': measureUnitId}
+  };
+
+  final response = await http.post(
+    uri,
+    headers: {'Content-Type': 'application/json'},
+    body: json.encode(body),
+  );
+
+  if (response.statusCode == 200) {
+    return json.decode(response.body) as Map<String, dynamic>;
+  } else {
+    print('Error creating ingredient: ${response.statusCode}');
+    print('Error response body: ${response.body}');
+    throw Exception('Failed to create ingredient: ${response.statusCode}');
+  }
+}
+
+// Function to create a recipe ingredient
+Future<Map<String, dynamic>> createRecipeIngredient(String baseUrl, int recipeId, int ingredientId, int count) async {
+  final uri = Uri.parse('$baseUrl/recipe_ingredient');
+  final body = {
+    'count': count,
+    'ingredient': {'id': ingredientId},
+    'recipe': {'id': recipeId}
+  };
+
+  final response = await http.post(
+    uri,
+    headers: {'Content-Type': 'application/json'},
+    body: json.encode(body),
+  );
+
+  if (response.statusCode == 200) {
+    return json.decode(response.body) as Map<String, dynamic>;
+  } else {
+    print('Error creating recipe ingredient: ${response.statusCode}');
+    print('Error response body: ${response.body}');
+    throw Exception('Failed to create recipe ingredient: ${response.statusCode}');
+  }
+}
+
+// Function to create a recipe step
+Future<Map<String, dynamic>> createRecipeStep(String baseUrl, String name, int duration) async {
+  final uri = Uri.parse('$baseUrl/recipe_step');
+  final body = {
+    'name': name,
+    'duration': duration
+  };
+
+  final response = await http.post(
+    uri,
+    headers: {'Content-Type': 'application/json'},
+    body: json.encode(body),
+  );
+
+  if (response.statusCode == 200) {
+    return json.decode(response.body) as Map<String, dynamic>;
+  } else {
+    print('Error creating recipe step: ${response.statusCode}');
+    print('Error response body: ${response.body}');
+    throw Exception('Failed to create recipe step: ${response.statusCode}');
+  }
+}
+
+// Function to create a recipe step link
+Future<Map<String, dynamic>> createRecipeStepLink(String baseUrl, int recipeId, int stepId, int number) async {
+  final uri = Uri.parse('$baseUrl/recipe_step_link');
+  final body = {
+    'number': number,
+    'recipe': {'id': recipeId},
+    'step': {'id': stepId}
+  };
+
+  final response = await http.post(
+    uri,
+    headers: {'Content-Type': 'application/json'},
+    body: json.encode(body),
+  );
+
+  if (response.statusCode == 200) {
+    return json.decode(response.body) as Map<String, dynamic>;
+  } else {
+    print('Error creating recipe step link: ${response.statusCode}');
+    print('Error response body: ${response.body}');
+    throw Exception('Failed to create recipe step link: ${response.statusCode}');
+  }
+}
+
 void main() async {
   // Create an API client to use the real Food API
   final apiClient = FoodApiClient(
@@ -114,6 +221,141 @@ void main() async {
 
     print('Found ${recipes.length} recipes:');
     print('----------------------------');
+
+    // Look for recipe ID 10
+    Recipe? recipe10;
+    for (final recipe in recipes) {
+      if (recipe.id == 10) {
+        recipe10 = recipe;
+        break;
+      }
+    }
+
+    // If recipe ID 10 is not found, try to fetch it directly
+    if (recipe10 == null) {
+      try {
+        print('Recipe ID 10 not found in the list. Trying to fetch it directly...');
+        recipe10 = await apiClient.getRecipe('10');
+        print('Successfully fetched recipe ID 10: ${recipe10.name}');
+      } catch (e) {
+        print('Error fetching recipe ID 10: $e');
+        print('Recipe ID 10 not found. Cannot proceed with adding ingredients and steps.');
+      }
+    }
+
+    // If recipe ID 10 is found, add ingredients and steps
+    if (recipe10 != null) {
+      print('\nFound recipe ID 10: ${recipe10.name}');
+      print('Adding ingredients and steps to recipe ID 10...');
+
+      // Define ingredients to add with names and measure units
+      final ingredientsToAdd = [
+        {
+          'id': 666, // Using ingredient ID 666 which we know exists
+          'count': 2,
+          'name': 'Special Ingredient for Recipe 10',
+          'measureUnitId': 1 // Assuming measure unit ID 1 exists (штука)
+        },
+        {
+          'id': 667, // New ingredient ID
+          'count': 3,
+          'name': 'Another Ingredient for Recipe 10',
+          'measureUnitId': 2 // Assuming measure unit ID 2 exists (грамм)
+        },
+        {
+          'id': 668, // New ingredient ID
+          'count': 100,
+          'name': 'Third Ingredient for Recipe 10',
+          'measureUnitId': 3 // Assuming measure unit ID 3 exists (миллилитр)
+        },
+      ];
+
+      // Add ingredients to recipe
+      print('\nAdding ingredients to recipe ID 10...');
+      for (final ingredient in ingredientsToAdd) {
+        try {
+          final ingredientId = ingredient['id'] as int;
+          final ingredientName = ingredient['name'] as String;
+          final measureUnitId = ingredient['measureUnitId'] as int;
+
+          // Check if ingredient exists
+          final exists = await checkIngredientExists(apiClient.baseUrl, ingredientId);
+
+          if (!exists) {
+            // Create ingredient if it doesn't exist
+            print('Ingredient ID $ingredientId does not exist. Creating it...');
+            try {
+              await createIngredient(
+                apiClient.baseUrl,
+                ingredientId,
+                ingredientName,
+                666.0, // Default calories for unit
+                measureUnitId
+              );
+              print('Successfully created ingredient ID $ingredientId: $ingredientName');
+            } catch (e) {
+              print('Error creating ingredient ID $ingredientId: $e');
+              continue; // Skip adding this ingredient to the recipe
+            }
+          } else {
+            print('Ingredient ID $ingredientId already exists');
+          }
+
+          // Add ingredient to recipe
+          final result = await createRecipeIngredient(
+            apiClient.baseUrl,
+            recipe10.id,
+            ingredientId,
+            ingredient['count'] as int
+          );
+          print('Successfully added ingredient ID $ingredientId to recipe ID 10');
+        } catch (e) {
+          print('Error adding ingredient ID ${ingredient['id']} to recipe ID 10: $e');
+        }
+      }
+
+      // Define steps to add
+      final stepsToAdd = [
+        {'name': 'Prepare ingredients', 'duration': 5},
+        {'name': 'Cook the main dish', 'duration': 15},
+        {'name': 'Serve and enjoy', 'duration': 2},
+      ];
+
+      // Add steps to recipe
+      print('\nAdding steps to recipe ID 10...');
+      final createdSteps = <Map<String, dynamic>>[];
+      for (final step in stepsToAdd) {
+        try {
+          final result = await createRecipeStep(
+            apiClient.baseUrl,
+            step['name'] as String,
+            step['duration'] as int
+          );
+          createdSteps.add(result);
+          print('Successfully created step: ${result['name']}');
+        } catch (e) {
+          print('Error creating step ${step['name']}: $e');
+        }
+      }
+
+      // Link steps to recipe
+      print('\nLinking steps to recipe ID 10...');
+      for (int i = 0; i < createdSteps.length; i++) {
+        try {
+          final result = await createRecipeStepLink(
+            apiClient.baseUrl,
+            recipe10.id,
+            createdSteps[i]['id'] as int,
+            i + 1 // Step number (1-based)
+          );
+          print('Successfully linked step ${i + 1} to recipe ID 10');
+        } catch (e) {
+          print('Error linking step ${i + 1} to recipe ID 10: $e');
+        }
+      }
+
+      print('\nFinished adding ingredients and steps to recipe ID 10');
+    }
 
     // Create a map to store all unique ingredients
     // Using a map with ingredient ID as key to avoid duplicates
