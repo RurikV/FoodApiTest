@@ -203,6 +203,105 @@ Future<Map<String, dynamic>> createRecipeStepLink(String baseUrl, int recipeId, 
   }
 }
 
+// Function to check and add ingredients to a recipe
+Future<void> checkAndAddIngredientsToRecipe(String baseUrl, Recipe recipe, List<Map<String, dynamic>> ingredientsToAdd) async {
+  print('\nChecking if recipe ${recipe.name} (ID: ${recipe.id}) already has ingredients...');
+  final existingIngredients = await getRecipeIngredientsFromApi(baseUrl, recipe.id);
+
+  if (existingIngredients.isNotEmpty) {
+    print('Recipe ${recipe.name} (ID: ${recipe.id}) already has ${existingIngredients.length} ingredients. Skipping adding new ingredients.');
+    return;
+  }
+
+  // Add ingredients to recipe
+  print('\nAdding ingredients to recipe ${recipe.name} (ID: ${recipe.id})...');
+  for (final ingredient in ingredientsToAdd) {
+    try {
+      final ingredientId = ingredient['id'] as int;
+      final ingredientName = ingredient['name'] as String;
+      final measureUnitId = ingredient['measureUnitId'] as int;
+
+      // Check if ingredient exists
+      final exists = await checkIngredientExists(baseUrl, ingredientId);
+
+      if (!exists) {
+        // Create ingredient if it doesn't exist
+        print('Ingredient ID $ingredientId does not exist. Creating it...');
+        try {
+          await createIngredient(
+            baseUrl,
+            ingredientId,
+            ingredientName,
+            666.0, // Default calories for unit
+            measureUnitId
+          );
+          print('Successfully created ingredient ID $ingredientId: $ingredientName');
+        } catch (e) {
+          print('Error creating ingredient ID $ingredientId: $e');
+          continue; // Skip adding this ingredient to the recipe
+        }
+      } else {
+        print('Ingredient ID $ingredientId already exists');
+      }
+
+      // Add ingredient to recipe
+      final result = await createRecipeIngredient(
+        baseUrl,
+        recipe.id,
+        ingredientId,
+        ingredient['count'] as int
+      );
+      print('Successfully added ingredient ID $ingredientId to recipe ${recipe.name} (ID: ${recipe.id})');
+    } catch (e) {
+      print('Error adding ingredient ID ${ingredient['id']} to recipe ${recipe.name} (ID: ${recipe.id}): $e');
+    }
+  }
+}
+
+// Function to check and add steps to a recipe
+Future<void> checkAndAddStepsToRecipe(String baseUrl, Recipe recipe, List<Map<String, dynamic>> stepsToAdd) async {
+  print('\nChecking if recipe ${recipe.name} (ID: ${recipe.id}) already has steps...');
+  final existingSteps = await getRecipeStepLinksFromApi(baseUrl, recipe.id);
+
+  if (existingSteps.isNotEmpty) {
+    print('Recipe ${recipe.name} (ID: ${recipe.id}) already has ${existingSteps.length} steps. Skipping adding new steps.');
+    return;
+  }
+
+  // Add steps to recipe
+  print('\nAdding steps to recipe ${recipe.name} (ID: ${recipe.id})...');
+  final createdSteps = <Map<String, dynamic>>[];
+  for (final step in stepsToAdd) {
+    try {
+      final result = await createRecipeStep(
+        baseUrl,
+        step['name'] as String,
+        step['duration'] as int
+      );
+      createdSteps.add(result);
+      print('Successfully created step: ${result['name']}');
+    } catch (e) {
+      print('Error creating step ${step['name']}: $e');
+    }
+  }
+
+  // Link steps to recipe
+  print('\nLinking steps to recipe ${recipe.name} (ID: ${recipe.id})...');
+  for (int i = 0; i < createdSteps.length; i++) {
+    try {
+      final result = await createRecipeStepLink(
+        baseUrl,
+        recipe.id,
+        createdSteps[i]['id'] as int,
+        i + 1 // Step number (1-based)
+      );
+      print('Successfully linked step ${i + 1} to recipe ${recipe.name} (ID: ${recipe.id})');
+    } catch (e) {
+      print('Error linking step ${i + 1} to recipe ${recipe.name} (ID: ${recipe.id}): $e');
+    }
+  }
+}
+
 void main() async {
   // Create an API client to use the real Food API
   final apiClient = FoodApiClient(
@@ -270,58 +369,6 @@ void main() async {
         },
       ];
 
-      // Check if recipe already has ingredients
-      print('\nChecking if recipe ID 10 already has ingredients...');
-      final existingIngredients = await getRecipeIngredientsFromApi(apiClient.baseUrl, recipe10.id);
-
-      if (existingIngredients.isNotEmpty) {
-        print('Recipe ID 10 already has ${existingIngredients.length} ingredients. Skipping adding new ingredients.');
-      } else {
-        // Add ingredients to recipe
-        print('\nAdding ingredients to recipe ID 10...');
-        for (final ingredient in ingredientsToAdd) {
-          try {
-            final ingredientId = ingredient['id'] as int;
-            final ingredientName = ingredient['name'] as String;
-            final measureUnitId = ingredient['measureUnitId'] as int;
-
-            // Check if ingredient exists
-            final exists = await checkIngredientExists(apiClient.baseUrl, ingredientId);
-
-            if (!exists) {
-              // Create ingredient if it doesn't exist
-              print('Ingredient ID $ingredientId does not exist. Creating it...');
-              try {
-                await createIngredient(
-                  apiClient.baseUrl,
-                  ingredientId,
-                  ingredientName,
-                  666.0, // Default calories for unit
-                  measureUnitId
-                );
-                print('Successfully created ingredient ID $ingredientId: $ingredientName');
-              } catch (e) {
-                print('Error creating ingredient ID $ingredientId: $e');
-                continue; // Skip adding this ingredient to the recipe
-              }
-            } else {
-              print('Ingredient ID $ingredientId already exists');
-            }
-
-            // Add ingredient to recipe
-            final result = await createRecipeIngredient(
-              apiClient.baseUrl,
-              recipe10.id,
-              ingredientId,
-              ingredient['count'] as int
-            );
-            print('Successfully added ingredient ID $ingredientId to recipe ID 10');
-          } catch (e) {
-            print('Error adding ingredient ID ${ingredient['id']} to recipe ID 10: $e');
-          }
-        }
-      }
-
       // Define steps to add
       final stepsToAdd = [
         {'name': 'Prepare ingredients', 'duration': 5},
@@ -329,46 +376,9 @@ void main() async {
         {'name': 'Serve and enjoy', 'duration': 2},
       ];
 
-      // Check if recipe already has steps
-      print('\nChecking if recipe ID 10 already has steps...');
-      final existingSteps = await getRecipeStepLinksFromApi(apiClient.baseUrl, recipe10.id);
-
-      if (existingSteps.isNotEmpty) {
-        print('Recipe ID 10 already has ${existingSteps.length} steps. Skipping adding new steps.');
-      } else {
-        // Add steps to recipe
-        print('\nAdding steps to recipe ID 10...');
-        final createdSteps = <Map<String, dynamic>>[];
-        for (final step in stepsToAdd) {
-          try {
-            final result = await createRecipeStep(
-              apiClient.baseUrl,
-              step['name'] as String,
-              step['duration'] as int
-            );
-            createdSteps.add(result);
-            print('Successfully created step: ${result['name']}');
-          } catch (e) {
-            print('Error creating step ${step['name']}: $e');
-          }
-        }
-
-        // Link steps to recipe
-        print('\nLinking steps to recipe ID 10...');
-        for (int i = 0; i < createdSteps.length; i++) {
-          try {
-            final result = await createRecipeStepLink(
-              apiClient.baseUrl,
-              recipe10.id,
-              createdSteps[i]['id'] as int,
-              i + 1 // Step number (1-based)
-            );
-            print('Successfully linked step ${i + 1} to recipe ID 10');
-          } catch (e) {
-            print('Error linking step ${i + 1} to recipe ID 10: $e');
-          }
-        }
-      }
+      // Use the helper functions to check and add ingredients and steps
+      await checkAndAddIngredientsToRecipe(apiClient.baseUrl, recipe10, ingredientsToAdd);
+      await checkAndAddStepsToRecipe(apiClient.baseUrl, recipe10, stepsToAdd);
 
       print('\nFinished processing ingredients and steps for recipe ID 10');
     }
@@ -471,6 +481,44 @@ void main() async {
       }
 
       print('----------------------------');
+    }
+
+    // Check and add ingredients and steps for all recipes
+    print('\nChecking and adding ingredients and steps for all recipes...');
+    for (final recipe in recipes) {
+      // Skip recipe ID 10 as we've already processed it
+      if (recipe.id == 10) {
+        continue;
+      }
+
+      // Define default ingredients to add for this recipe
+      final ingredientsToAdd = [
+        {
+          'id': 666, // Using ingredient ID 666 which we know exists
+          'count': 2,
+          'name': 'Special Ingredient',
+          'measureUnitId': 1 // Assuming measure unit ID 1 exists (штука)
+        },
+        {
+          'id': 667, // New ingredient ID
+          'count': 3,
+          'name': 'Another Ingredient',
+          'measureUnitId': 2 // Assuming measure unit ID 2 exists (грамм)
+        },
+      ];
+
+      // Define default steps to add for this recipe
+      final stepsToAdd = [
+        {'name': 'Prepare ingredients', 'duration': 5},
+        {'name': 'Cook the dish', 'duration': 15},
+        {'name': 'Serve and enjoy', 'duration': 2},
+      ];
+
+      // Use the helper functions to check and add ingredients and steps
+      await checkAndAddIngredientsToRecipe(apiClient.baseUrl, recipe, ingredientsToAdd);
+      await checkAndAddStepsToRecipe(apiClient.baseUrl, recipe, stepsToAdd);
+
+      print('\nFinished processing ingredients and steps for recipe ${recipe.name} (ID: ${recipe.id})');
     }
 
     // Display all unique ingredients from all recipes
