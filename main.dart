@@ -42,6 +42,20 @@ Future<Map<String, dynamic>> getIngredientDetailsFromApi(String baseUrl, int ing
   }
 }
 
+// Function to fetch measure unit details from the measure_unit endpoint
+Future<Map<String, dynamic>> getMeasureUnitDetailsFromApi(String baseUrl, int measureUnitId) async {
+  final uri = Uri.parse('$baseUrl/measure_unit/$measureUnitId');
+  final response = await http.get(uri);
+
+  if (response.statusCode == 200) {
+    return json.decode(response.body) as Map<String, dynamic>;
+  } else {
+    print('Error fetching measure unit details: ${response.statusCode}');
+    print('Error response body: ${response.body}');
+    throw Exception('Failed to load measure unit details: ${response.statusCode}');
+  }
+}
+
 void main() async {
   // Create an API client to use the real Food API
   final apiClient = FoodApiClient(
@@ -96,7 +110,27 @@ void main() async {
               final caloriesForUnit = ingredientDetails['caloriesForUnit'] as num;
               final measureUnitId = ingredientDetails['measureUnit']['id'] as int;
 
-              print('  - $ingredientName: $count (Measure Unit ID: $measureUnitId, Calories: $caloriesForUnit per unit)');
+              // Fetch measure unit details
+              try {
+                final measureUnitDetails = await getMeasureUnitDetailsFromApi(apiClient.baseUrl, measureUnitId);
+                final measureUnitOne = measureUnitDetails['one'] as String;
+                final measureUnitFew = measureUnitDetails['few'] as String;
+                final measureUnitMany = measureUnitDetails['many'] as String;
+
+                // Determine which form to use based on count
+                String measureUnitForm;
+                if (count == 1) {
+                  measureUnitForm = measureUnitOne;
+                } else if (count >= 2 && count <= 4) {
+                  measureUnitForm = measureUnitFew;
+                } else {
+                  measureUnitForm = measureUnitMany;
+                }
+
+                print('  - $ingredientName: $count $measureUnitForm (Calories: $caloriesForUnit per unit)');
+              } catch (e) {
+                print('  - $ingredientName: $count (Measure Unit ID: $measureUnitId, Calories: $caloriesForUnit per unit, Error fetching measure unit details: $e)');
+              }
             } catch (e) {
               print('  - Ingredient ID: $ingredientId, Count: $count (Error fetching details: $e)');
             }
@@ -125,7 +159,17 @@ void main() async {
         final caloriesForUnit = ingredient['caloriesForUnit'] as num;
         final measureUnitId = ingredient['measureUnit']['id'] as int;
 
-        print('- $name (${caloriesForUnit} calories per unit, Measure Unit ID: $measureUnitId)');
+        try {
+          // Fetch measure unit details
+          final measureUnitDetails = await getMeasureUnitDetailsFromApi(apiClient.baseUrl, measureUnitId);
+          final measureUnitOne = measureUnitDetails['one'] as String;
+          final measureUnitFew = measureUnitDetails['few'] as String;
+          final measureUnitMany = measureUnitDetails['many'] as String;
+
+          print('- $name (${caloriesForUnit} calories per unit, Measure Units: one: $measureUnitOne, few: $measureUnitFew, many: $measureUnitMany)');
+        } catch (e) {
+          print('- $name (${caloriesForUnit} calories per unit, Measure Unit ID: $measureUnitId, Error fetching measure unit details: $e)');
+        }
       }
     }
 
