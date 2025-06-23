@@ -5,6 +5,7 @@ import 'lib/models/recipe_step.dart';
 import 'lib/models/ingredient.dart';
 import 'lib/api_client.dart';
 import 'lib/models/recipe_ingredient.dart' as ri;
+import 'lib/models/recipe_step_link.dart' as rsl;
 
 // Function to fetch recipe ingredients directly from the recipe_ingredient endpoint
 Future<List<Map<String, dynamic>>> getRecipeIngredientsFromApi(String baseUrl, int recipeId) async {
@@ -53,6 +54,45 @@ Future<Map<String, dynamic>> getMeasureUnitDetailsFromApi(String baseUrl, int me
     print('Error fetching measure unit details: ${response.statusCode}');
     print('Error response body: ${response.body}');
     throw Exception('Failed to load measure unit details: ${response.statusCode}');
+  }
+}
+
+// Function to fetch recipe step links directly from the recipe_step_link endpoint
+Future<List<Map<String, dynamic>>> getRecipeStepLinksFromApi(String baseUrl, int recipeId) async {
+  final uri = Uri.parse('$baseUrl/recipe_step_link');
+  final response = await http.get(uri);
+
+  if (response.statusCode == 200) {
+    final List<dynamic> allRecipeStepLinks = json.decode(response.body);
+
+    // Filter recipe step links for this recipe
+    final recipeStepLinks = allRecipeStepLinks.where((stepLink) {
+      return stepLink['recipe'] != null && 
+             stepLink['recipe']['id'] == recipeId;
+    }).toList();
+
+    // Sort step links by number to ensure correct order
+    recipeStepLinks.sort((a, b) => (a['number'] as int).compareTo(b['number'] as int));
+
+    return recipeStepLinks.cast<Map<String, dynamic>>();
+  } else {
+    print('Error fetching recipe step links: ${response.statusCode}');
+    print('Error response body: ${response.body}');
+    throw Exception('Failed to load recipe step links: ${response.statusCode}');
+  }
+}
+
+// Function to fetch recipe step details from the recipe_step endpoint
+Future<Map<String, dynamic>> getRecipeStepDetailsFromApi(String baseUrl, int stepId) async {
+  final uri = Uri.parse('$baseUrl/recipe_step/$stepId');
+  final response = await http.get(uri);
+
+  if (response.statusCode == 200) {
+    return json.decode(response.body) as Map<String, dynamic>;
+  } else {
+    print('Error fetching recipe step details: ${response.statusCode}');
+    print('Error response body: ${response.body}');
+    throw Exception('Failed to load recipe step details: ${response.statusCode}');
   }
 }
 
@@ -138,6 +178,38 @@ void main() async {
         }
       } catch (e) {
         print('  Error fetching ingredients: $e');
+      }
+
+      // Fetch and display steps using the recipe_step_link endpoint
+      print('\nSteps:');
+      try {
+        final recipeStepLinks = await getRecipeStepLinksFromApi(apiClient.baseUrl, recipe.id);
+
+        if (recipeStepLinks.isEmpty) {
+          print('  No steps found for this recipe.');
+        } else {
+          print('  Found ${recipeStepLinks.length} steps:');
+
+          for (int i = 0; i < recipeStepLinks.length; i++) {
+            final recipeStepLink = recipeStepLinks[i];
+            final stepId = recipeStepLink['step']['id'] as int;
+            final stepNumber = recipeStepLink['number'] as int;
+
+            try {
+              // Fetch step details from the recipe_step endpoint
+              final stepDetails = await getRecipeStepDetailsFromApi(apiClient.baseUrl, stepId);
+
+              final stepName = stepDetails['name'] as String;
+              final stepDuration = stepDetails['duration'] as int;
+
+              print('  ${i + 1}. $stepName (${stepDuration} minutes)');
+            } catch (e) {
+              print('  ${i + 1}. Step ID: $stepId, Number: $stepNumber (Error fetching details: $e)');
+            }
+          }
+        }
+      } catch (e) {
+        print('  Error fetching steps: $e');
       }
 
       print('----------------------------');
